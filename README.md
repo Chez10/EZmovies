@@ -1,33 +1,53 @@
 # EZmovies
 
-Colaborators: Marcos Aldana, Kevin Sanchez Criado, Bryan Alfonso Ceballos, Abel Thomas
+Collaborators: Marcos Aldana, Kevin Sanchez Criado, Bryan Alfonso Ceballos, Abel Thomas
 
-Idea
-Nowadays the entertainment industry is greater than ever, reaching historical levels in terms of film production releases with a huge number of movies and series to choose from that can be difficult to choose.
+## Project Overview
 
-Development Tools
--JavaScript
--HTML
--CSS
--Node js
--MongoDB
--OMDb API
+**EZmovies** is a movie search website developed to help users discover movies and series by providing basic information about each title. With the entertainment industry at an all-time high in content production, EZmovies simplifies the choice process by allowing users to search for movies, view essential details, and create personalized watchlists. 
 
-Team Collaboration
-To create a website to search for movies to watch and that provides basic information about your choice of movie the team worked on:
--Marcos Aldana: Developed the sign-in/log-in features and the MongoDB integration to make users' account
--Kevin Sanchez Criado: Developed the design of the web and the API integration to be able to use a search feature and get the movies information from the online database
--Bryan Alfonso Ceballos: Developed a watchlist of movies
--Abel Thomas: Developed the requirements and validations when creating a user password
+## Development Tools
 
-Implementation
-This program can be used on looking for movies to watch, search for more information about a movie that you like and creating a watchlist of movies that you love or movies that you want to watch in the future.
+The project was built using the following technologies:
+- **JavaScript**: For dynamic interactions and functionality.
+- **HTML & CSS**: For structuring and styling the website interface.
+- **Node.js**: For backend development and server management.
+- **MongoDB**: For database management, storing user accounts and watchlists.
+- **OMDb API**: For accessing movie information from an extensive online database.
 
-Requirement to Run
-To run this code on your computer you need to meet some requirements:
--Use a computer with Windows as operative system
--Install Visual Studio Code with the respective extensions to run code with JavaScript, HTML, and CSS programing languages
--Install MongoDB
--Install Node.js 
-When all above are install, on Visual Studio Code run the file called index.js and then go to your default web browser and search http://localhost:5000/
+## Team Collaboration
+
+The team contributed the following components to achieve the project objectives:
+
+- **Marcos Aldana**: Implemented the sign-in/log-in features and MongoDB integration for user accounts.
+- **Kevin Sanchez Criado**: Designed the website interface and integrated the OMDb API to enable movie search and information retrieval.
+- **Bryan Alfonso Ceballos**: Developed the watchlist feature, allowing users to save and manage favorite movies.
+- **Abel Thomas**: Established password requirements and validations for secure user registration.
+
+## Implementation
+
+EZmovies allows users to:
+- Search for movies and series by title.
+- Access basic information (e.g., synopsis, release year, genre) retrieved from the OMDb API.
+- Create a watchlist for movies they want to watch or revisit in the future.
+  
+The website offers a user-friendly experience, combining functionality and ease of use for efficient movie discovery.
+
+## Requirements to Run
+
+To run EZmovies locally on your machine, ensure the following requirements are met:
+
+1. **Operating System**: A computer with Windows OS.
+2. **Software**:
+   - **Visual Studio Code**: With extensions for JavaScript, HTML, and CSS.
+   - **MongoDB**: For database setup and storage.
+   - **Node.js**: To run the server and backend functionality.
+
+### Setup and Run
+
+1. **Clone the repository** and open it in Visual Studio Code.
+2. **Install dependencies** (e.g., Express, Mongoose) by running:
+   ```bash
+   npm install
+
 
