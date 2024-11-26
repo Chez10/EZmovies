@@ -1,7 +1,9 @@
 const movieSearchBox = document.getElementById('movie-search-box');
 const searchList = document.getElementById('search-list');
 const resultGrid = document.getElementById('result-grid');
-const API_KEY = 'fc1fef96'; 
+require('dotenv').config();
+const API_KEY = process.env.API_KEY;
+
 
 
 async function fetchFromAPI(url) {

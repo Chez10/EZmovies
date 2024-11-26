@@ -11,7 +11,7 @@ const bodyParser = require('body-parser');
 const Movie = require('./models/Movie'); // Movie model
 const UserMovie = require('./models/UserMovie'); 
 const User = require('./models/User'); 
-
+require('dotenv').config();
 
 const app = express();
 app.use(bodyParser.json());
@@ -25,7 +25,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '..', 'views'));
 
 app.use(session({
-    secret: '1234', 
+    secret: process.env.SESSION_SECRET , 
     resave: false,
     saveUninitialized: false, 
     cookie: { secure: false } 
