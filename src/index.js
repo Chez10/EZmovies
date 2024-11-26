@@ -5,8 +5,16 @@ const bcrypt = require('bcrypt');
 const { rmSync } = require("fs");
 const { Script } = require("vm");
 const session = require('express-session');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+//const Movie = require('./models/SavedMovie');
+const Movie = require('./models/Movie'); // Movie model
+const UserMovie = require('./models/UserMovie'); 
+const User = require('./models/User'); 
+
 
 const app = express();
+app.use(bodyParser.json());
 // convert data into json format
 app.use(express.json());
 // Static file
@@ -17,14 +25,14 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '..', 'views'));
 
 app.use(session({
-    secret: '1234', // Replace '1234' with a real secret key
+    secret: '1234', 
     resave: false,
-    saveUninitialized: false, // Only create a session when you explicitly set something on the session
-    cookie: { secure: false } // Use 'true' only if you are using HTTPS
+    saveUninitialized: false, 
+    cookie: { secure: false } 
 }));
 
 app.use(express.urlencoded({ extended: true }));
-//use EJS as the view engine
+
 app.set("view engine", "ejs");
 
 app.get("/", (req, res) => {
@@ -41,86 +49,147 @@ app.get('/logout', function(req, res) {
             console.log(err);
             res.status(500).send({error: "Error logging out"});
         } else {
-            // This line should instruct the browser to clear the session cookie
-            res.clearCookie('connect.sid'); // Adjust if using a custom session cookie name
+            
+            res.clearCookie('connect.sid'); 
             res.json({redirect: "/login"});
         }
     });
 });
 
 app.get('/login', (req, res) => {
-    // Render 'login.ejs' from the views directory
+    
     res.render('login');
 });
 
+app.post('/signup', async (req, res) => {
+    const { username, password } = req.body;
 
+    console.log('Request body:', req.body); 
 
-// Register User
-app.post("/signup", async (req, res) => {
+    try {
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Name and password are required' });
+        }
+        const existingUser = await User.findOne({ name: username });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Username already exists' });
+        }
 
-    const data = {
-        name: req.body.username,
-        password: req.body.password
-    }
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Password validation
-    const passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*]).{8,}$/;
-    if (!passwordRegex.test(data.password)) {
-        return res.send('Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.');
-    }
+        const newUser = new User({ name: username, password: hashedPassword });
+        await newUser.save();
 
-    // Check if the username already exists in the database
-    const existingUser = await collection.findOne({ name: data.name });
-
-    if (existingUser) {
-        res.send('User already exists. Please choose a different username.');
-    } else {
-        // Hash the password using bcrypt
-        const saltRounds = 10; // Number of salt rounds for bcrypt
-        const hashedPassword = await bcrypt.hash(data.password, saltRounds);
-
-        data.password = hashedPassword; // Replace the original password with the hashed one
-
-        const userdata = await collection.insertMany(data);
-        console.log(userdata);
+        //res.status(201).json({ message: 'User registered successfully' });
         res.redirect('/');
+    } catch (error) {
+        console.error('Signup error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
-
 });
+
+
 
 // Login user 
-app.post("/login", async (req, res) => {
-    try {
-        // Assuming 'collection' is your user collection where you store user data
-        const check = await collection.findOne({ name: req.body.username });
-        if (!check) {
-            return res.send("User name cannot be found");
-        }
-        // Compare the hashed password from the database with the plaintext password
-        const isPasswordMatch = await bcrypt.compare(req.body.password, check.password);
-        if (!isPasswordMatch) {
-            return res.send("Wrong password");
-        }
-        else {
-            // If the user is authenticated, store user information in session
-            // Assuming 'check' contains a unique identifier for the user, e.g., check._id
-            req.session.userId = check._id; // Store the user's ID in the session
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
 
-            // Redirect to home/dashboard page after successful login
-            // 'res.render("home")' might be used to render a page directly
-            // Consider using 'res.redirect("/dashboard")' if you want to navigate to a route that renders the home page
-            res.render("home"); // or res.render("home") if you're rendering directly without redirection
+    try {
+        // Find user by username
+        const user = await User.findOne({ name: username });
+        if (!user) {
+            return res.status(400).json({ error: 'Invalid username or password' });
         }
+
+        // Verify the password
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(400).json({ error: 'Invalid username or password' });
+        }
+        req.session.userId = user._id;
+        console.log('Session userId:', req.session.userId);
+
+        //res.status(200).json({ message: 'Login successful', userId: user._id });
+        res.render("home");
     } catch (error) {
-        console.error("Login error:", error); // Log the error for debugging purposes
-        res.send("Wrong details");
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+
+
+
+app.post('/save-movie', async (req, res) => {
+    const { movieId, title, poster, releaseDate, overview } = req.body;
+
+    // Get userId from the session
+    const userId = req.session.userId;
+
+    try {
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized: Please log in' });
+        }
+
+        let movie = await Movie.findById(movieId);
+        if (!movie) {
+            movie = new Movie({ _id: movieId, title, poster, releaseDate, overview });
+            await movie.save();
+        }
+
+        // Check if the user already saved this movie
+        const existingUserMovie = await UserMovie.findOne({ userId, movieId });
+        if (existingUserMovie) {
+            return res.status(400).json({ error: 'Movie already saved!' });
+        }
+        const userMovie = new UserMovie({ userId, movieId });
+        await userMovie.save();
+
+        res.status(200).json({ message: 'Movie saved successfully!' });
+    } catch (error) {
+        console.error('Error saving movie:', error);
+        res.status(500).json({ error: 'Failed to save movie' });
+    }
+});
+
+app.get('/get-saved-movies/:userId', async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        // Find all movies saved by the user
+        const userMovies = await UserMovie.find({ userId }).populate('movieId'); 
+
+        res.status(200).json(userMovies);
+    } catch (error) {
+        console.error('Error retrieving saved movies:', error);
+        res.status(500).json({ error: 'Failed to retrieve saved movies' });
+    }
+});
+
+app.get('/get-saved-movies', async (req, res) => {
+    const userId = req.session.userId;
+
+    try {
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized: Please log in' });
+        }
+
+        // Find all movies saved by the user
+        const userMovies = await UserMovie.find({ userId }).populate('movieId'); 
+
+        res.status(200).json(userMovies);
+    } catch (error) {
+        console.error('Error retrieving saved movies:', error);
+        res.status(500).json({ error: 'Failed to retrieve saved movies' });
+    }
+});
+
+
 
 
 
 // Define Port for Application
-const port = 5000;
+const port = 8080;
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`)
 });
