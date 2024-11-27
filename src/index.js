@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require("express");
 const path = require("path");
 const collection = require("./config");
@@ -11,7 +12,7 @@ const bodyParser = require('body-parser');
 const Movie = require('./models/Movie'); // Movie model
 const UserMovie = require('./models/UserMovie'); 
 const User = require('./models/User'); 
-require('dotenv').config();
+const API_KEY = process.env.API_KEY;
 
 const app = express();
 app.use(bodyParser.json());
@@ -108,6 +109,8 @@ app.post('/login', async (req, res) => {
         }
         req.session.userId = user._id;
         console.log('Session userId:', req.session.userId);
+        console.log('Loaded API Key:', process.env.API_KEY);
+        console.log('Loaded Secret Key:', process.env.SESSION_SECRET);
 
         //res.status(200).json({ message: 'Login successful', userId: user._id });
         res.render("home");
@@ -123,7 +126,6 @@ app.post('/login', async (req, res) => {
 app.post('/save-movie', async (req, res) => {
     const { movieId, title, poster, releaseDate, overview } = req.body;
 
-    // Get userId from the session
     const userId = req.session.userId;
 
     try {
@@ -137,7 +139,6 @@ app.post('/save-movie', async (req, res) => {
             await movie.save();
         }
 
-        // Check if the user already saved this movie
         const existingUserMovie = await UserMovie.findOne({ userId, movieId });
         if (existingUserMovie) {
             return res.status(400).json({ error: 'Movie already saved!' });
@@ -156,7 +157,6 @@ app.get('/get-saved-movies/:userId', async (req, res) => {
     const { userId } = req.params;
 
     try {
-        // Find all movies saved by the user
         const userMovies = await UserMovie.find({ userId }).populate('movieId'); 
 
         res.status(200).json(userMovies);
@@ -174,7 +174,6 @@ app.get('/get-saved-movies', async (req, res) => {
             return res.status(401).json({ error: 'Unauthorized: Please log in' });
         }
 
-        // Find all movies saved by the user
         const userMovies = await UserMovie.find({ userId }).populate('movieId'); 
 
         res.status(200).json(userMovies);
@@ -184,11 +183,60 @@ app.get('/get-saved-movies', async (req, res) => {
     }
 });
 
+app.get('/api/search', async (req, res) => {
+    const { query } = req.query;
+
+    if (!query || query.trim() === '') {
+        return res.status(400).json({ error: 'Search term is required' });
+    }
+
+    const API_KEY = process.env.API_KEY;
+    try {
+        const url = `https://www.omdbapi.com/?s=${query}&apikey=${API_KEY}`;
+        console.log('OMDB API URL:', url);
+
+        const omdbResponse = await fetch(url);
+        const data = await omdbResponse.json();
+
+        if (data.Response === "True") {
+            res.status(200).json(data);
+        } else {
+            res.status(404).json({ error: data.Error });
+        }
+    } catch (error) {
+        console.error('Error fetching from OMDB API:', error);
+        res.status(500).json({ error: 'Failed to fetch data from OMDB' });
+    }
+});
+
+
+app.get('/api/movie', async (req, res) => {
+    const { id } = req.query;
+    if (!id) {
+        return res.status(400).json({ error: 'Movie ID is required' });
+    }
+
+    const API_KEY = process.env.API_KEY;
+    try {
+        const url = `https://www.omdbapi.com/?i=${id}&apikey=${API_KEY}`;
+        console.log('OMDB API URL for movie details:', url);
+
+        const omdbResponse = await fetch(url);
+        const data = await omdbResponse.json();
+
+        if (data.Response === "True") {
+            res.status(200).json(data);
+        } else {
+            res.status(404).json({ error: data.Error });
+        }
+    } catch (error) {
+        console.error('Error fetching movie details from OMDB API:', error);
+        res.status(500).json({ error: 'Failed to fetch movie details from OMDB' });
+    }
+});
 
 
 
-
-// Define Port for Application
 const port = 8080;
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`)

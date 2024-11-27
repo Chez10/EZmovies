@@ -1,8 +1,10 @@
+//require('dotenv').config();
 const movieSearchBox = document.getElementById('movie-search-box');
 const searchList = document.getElementById('search-list');
 const resultGrid = document.getElementById('result-grid');
-require('dotenv').config();
-const API_KEY = process.env.API_KEY;
+const debouncedSearchMovie = debounce(searchMovie, 500);
+movieSearchBox.addEventListener('input', debouncedSearchMovie);
+
 
 
 
@@ -13,24 +15,54 @@ async function fetchFromAPI(url) {
         return await res.json();
     } catch (error) {
         console.error('Error fetching from API:', error);
-        alert('Failed to fetch data. Please try again.');
+        //alert('Failed to fetch data. Please try again.');
     }
 }
 
 async function getMovies(searchTerm) {
-    const URL = `https://omdbapi.com/?s=${searchTerm}&page=1&apikey=${API_KEY}`;
+    const URL = `/api/search?query=${searchTerm}`; 
     const data = await fetchFromAPI(URL);
     if (data?.Response === "True") showList(data.Search);
 }
 
+
 function searchMovie() {
     const searchTerm = movieSearchBox.value.trim();
-    if (searchTerm.length > 0) {
-        searchList.classList.remove('hide-search-list');
-        getMovies(searchTerm);
-    } else {
-        searchList.classList.add('hide-search-list');
+    
+    if (!searchTerm || searchTerm.length === 0) {
+        searchList.classList.add('hide-search-list'); 
+        return; 
     }
+    searchList.classList.remove('hide-search-list');
+    getMovies(searchTerm);
+}
+
+function debounce(func, delay) {
+    let timer;
+    return function (...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+function movieInfoLoad() {
+    const searchListMovies = searchList.querySelectorAll('.search-list-item');
+    searchListMovies.forEach(movie => {
+        movie.addEventListener('click', async () => {
+            const movieId = movie.dataset.id;
+            if (!movieId) {
+                alert('Invalid movie selected.');
+                return;
+            }
+
+            console.log('Fetching details for movie ID:', movieId);
+            searchList.classList.add('hide-search-list');
+            movieSearchBox.value = "";
+
+            const result = await fetchFromAPI(`/api/movie?id=${movieId}`);
+            if (result) movieInformation(result);
+        });
+    });
 }
 
 function showList(movies) {
@@ -55,20 +87,7 @@ function showList(movies) {
     movieInfoLoad();
 }
 
-function movieInfoLoad() {
-    const searchListMovies = searchList.querySelectorAll('.search-list-item');
-    searchListMovies.forEach(movie => {
-        movie.addEventListener('click', async () => {
-            searchList.classList.add('hide-search-list');
-            movieSearchBox.value = "";
 
-            const result = await fetchFromAPI(
-                `https://www.omdbapi.com/?i=${movie.dataset.id}&apikey=${API_KEY}`
-            );
-            if (result) movieInformation(result);
-        });
-    });
-}
 
 function movieInformation(details) {
     console.log('Rendering movie details:', details); 
@@ -150,6 +169,7 @@ async function loginUser() {
         if (response.ok) {
             localStorage.setItem('userId', data.userId);
             alert('Login successful!');
+            console.log('Session userId after login:', req.session.userId);
         } else {
             alert(`Login failed: ${data.error}`);
         }
@@ -194,10 +214,6 @@ async function fetchSavedMovies() {
 document.addEventListener('DOMContentLoaded', () => {
     fetchSavedMovies(); 
 });
-
-
-
-
 
 
 window.addEventListener('click', (event) => {
